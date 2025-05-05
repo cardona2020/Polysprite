@@ -1,1 +1,8 @@
-
+body {
+  background-color: black;
+}
+#LogoDiv {
+  background-color: black;
+  padding: 40px;
+  text-align: center;
+}
