@@ -2,25 +2,43 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Interactive 3D Logo</title>
+    <title>Centered 3D Logo</title>
     <style>
-      body { margin: 0; overflow: hidden; background: #000; }
-      canvas { display: block; }
+      body {
+        margin: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      #logo-container {
+        width: 25vw;
+        aspect-ratio: 1 / 1;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+      }
     </style>
   </head>
   <body>
+    <div id="logo-container"></div>
+
     <script type="module">
       import * as THREE from 'https://cdn.skypack.dev/three@0.155.0';
 
+      const container = document.getElementById('logo-container');
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
       camera.position.set(0, 0, 5);
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      container.appendChild(renderer.domElement);
 
-      // Colors from your logo
       const hexColors = [
         '#37d1b8', '#38c7c1', '#43d7c7', '#55d5af',
         '#66d095', '#6adfd4', '#7fcd7a', '#8473cd',
@@ -38,7 +56,6 @@
       const positions = [];
       const colors = [];
 
-      // Create triangle grid on each visible cube face
       const triangleSize = 0.3;
       const triH = Math.sqrt(3) * triangleSize / 2;
 
@@ -46,5 +63,61 @@
         const p1 = new THREE.Vector3(x, y, 0);
         const p2 = new THREE.Vector3(x + triangleSize, y, 0);
         const p3 = new THREE.Vector3(x + triangleSize / 2, y + triH, 0);
-
         const pts = [p1, p2, p3];
+        const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        pts.forEach(p => {
+          p.applyMatrix4(rotMatrix);
+          positions.push(p.x, p.y, p.z);
+          colors.push(color.r, color.g, color.b);
+        });
+      }
+
+      const faceRotations = [
+        new THREE.Euler(0, 0, 0),
+        new THREE.Euler(0, Math.PI / 2, 0),
+        new THREE.Euler(-Math.PI / 2, 0, 0)
+      ];
+
+      faceRotations.forEach(rot => {
+        const matrix = new THREE.Matrix4().makeRotationFromEuler(rot);
+        for (let x = -1; x <= 1; x++) {
+          for (let y = -1; y <= 1; y++) {
+            addTriangle(x * triangleSize, y * triH, matrix);
+          }
+        }
+      });
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true });
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+
+      let rotating = false;
+      container.addEventListener('mousedown', () => rotating = true);
+      window.addEventListener('mouseup', () => rotating = false);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (rotating) {
+          points.rotation.y += 0.01;
+          points.rotation.x += 0.005;
+        }
+        renderer.render(scene, camera);
+      }
+
+      function resizeRenderer() {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+
+      window.addEventListener('resize', resizeRenderer);
+      resizeRenderer();
+      animate();
+    </script>
+  </body>
+</html>
