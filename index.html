@@ -14,111 +14,37 @@
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-      camera.position.set(3, 3, 3);
-      camera.lookAt(0, 0, 0);
+      camera.position.set(0, 0, 5);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Color palette from logo
-      const colorPalette = [
+      // Colors from your logo
+      const hexColors = [
         '#37d1b8', '#38c7c1', '#43d7c7', '#55d5af',
         '#66d095', '#6adfd4', '#7fcd7a', '#8473cd',
         '#8eca64', '#94e9e0'
       ];
 
-      function hexToRgb(hex) {
-        const bigint = parseInt(hex.replace('#', ''), 16);
-        return [
-          ((bigint >> 16) & 255) / 255,
-          ((bigint >> 8) & 255) / 255,
-          (bigint & 255) / 255
-        ];
-      }
+      const colorPalette = hexColors.map(hex => {
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
+        return new THREE.Color(r, g, b);
+      });
 
-      // Cube face generation
+      const geometry = new THREE.BufferGeometry();
       const positions = [];
       const colors = [];
 
-      const size = 1;
-      const half = size / 2;
-      const triangleHeight = Math.sqrt(3) / 2 * size;
+      // Create triangle grid on each visible cube face
+      const triangleSize = 0.3;
+      const triH = Math.sqrt(3) * triangleSize / 2;
 
-      const triangle = [
-        [0, 0, 0],
-        [size, 0, 0],
-        [half, triangleHeight, 0]
-      ];
+      function addTriangle(x, y, rotMatrix) {
+        const p1 = new THREE.Vector3(x, y, 0);
+        const p2 = new THREE.Vector3(x + triangleSize, y, 0);
+        const p3 = new THREE.Vector3(x + triangleSize / 2, y + triH, 0);
 
-      const faceOffsets = [
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, -1),
-        new THREE.Vector3(0, 1, 0),
-      ];
-
-      const faceRotations = [
-        new THREE.Euler(0, 0, 0),
-        new THREE.Euler(0, Math.PI / 2, 0),
-        new THREE.Euler(-Math.PI / 2, 0, 0),
-      ];
-
-      function createFace(origin, rotation) {
-        const rotMatrix = new THREE.Matrix4().makeRotationFromEuler(rotation);
-        const base = new THREE.Vector3().copy(origin);
-
-        for (let x = 0; x < 3; x++) {
-          for (let y = 0; y < 3; y++) {
-            const offset = new THREE.Vector3(x * size, y * triangleHeight, 0);
-            const color = hexToRgb(colorPalette[Math.floor(Math.random() * colorPalette.length)]);
-
-            for (const point of triangle) {
-              const v = new THREE.Vector3(...point).add(offset).applyMatrix4(rotMatrix).add(base);
-              positions.push(v.x, v.y, v.z);
-              colors.push(...color);
-            }
-          }
-        }
-      }
-
-      // Build cube faces
-      for (let i = 0; i < 3; i++) {
-        createFace(faceOffsets[i], faceRotations[i]);
-      }
-
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-      const material = new THREE.PointsMaterial({
-        size: 0.05,
-        vertexColors: true
-      });
-
-      const points = new THREE.Points(geometry, material);
-      scene.add(points);
-
-      let rotating = false;
-
-      window.addEventListener('mousedown', () => rotating = true);
-      window.addEventListener('mouseup', () => rotating = false);
-
-      function animate() {
-        requestAnimationFrame(animate);
-        if (rotating) {
-          points.rotation.y += 0.01;
-          points.rotation.x += 0.005;
-        }
-        renderer.render(scene, camera);
-      }
-
-      animate();
-
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    </script>
-  </body>
-</html>
+        const pts = [p1, p2, p3];
