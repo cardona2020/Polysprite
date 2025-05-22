@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Centered 3D Logo</title>
+    <title>Instanced Logo Cube</title>
     <style>
       body {
         margin: 0;
@@ -32,67 +32,58 @@
 
       const container = document.getElementById('logo-container');
       const scene = new THREE.Scene();
-
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
       camera.position.set(0, 0, 5);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       container.appendChild(renderer.domElement);
 
+      const triangleShape = new THREE.BufferGeometry();
+      const triangleSize = 0.2;
+      const triHeight = Math.sqrt(3) * triangleSize / 2;
+      const vertices = new Float32Array([
+        0, triHeight, 0,
+        -triangleSize / 2, 0, 0,
+        triangleSize / 2, 0, 0
+      ]);
+      triangleShape.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
       const hexColors = [
         '#37d1b8', '#38c7c1', '#43d7c7', '#55d5af',
         '#66d095', '#6adfd4', '#7fcd7a', '#8473cd',
         '#8eca64', '#94e9e0'
       ];
+      const colorPalette = hexColors.map(hex => new THREE.Color(hex));
 
-      const colorPalette = hexColors.map(hex => {
-        const r = parseInt(hex.slice(1, 3), 16) / 255;
-        const g = parseInt(hex.slice(3, 5), 16) / 255;
-        const b = parseInt(hex.slice(5, 7), 16) / 255;
-        return new THREE.Color(r, g, b);
-      });
+      const count = 300;
+      const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+      const mesh = new THREE.InstancedMesh(triangleShape, material, count);
+      scene.add(mesh);
 
-      const geometry = new THREE.BufferGeometry();
-      const positions = [];
-      const colors = [];
+      const dummy = new THREE.Object3D();
+      const color = new THREE.Color();
+      const colorAttr = new Float32Array(count * 3);
 
-      const triangleSize = 0.3;
-      const triH = Math.sqrt(3) * triangleSize / 2;
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = 1 + Math.random() * 0.5;
+        const height = (Math.random() - 0.5) * 2;
 
-      function addTriangle(x, y, rotMatrix) {
-        const p1 = new THREE.Vector3(x, y, 0);
-        const p2 = new THREE.Vector3(x + triangleSize, y, 0);
-        const p3 = new THREE.Vector3(x + triangleSize / 2, y + triH, 0);
-        const pts = [p1, p2, p3];
-        const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-        pts.forEach(p => {
-          p.applyMatrix4(rotMatrix);
-          positions.push(p.x, p.y, p.z);
-          colors.push(color.r, color.g, color.b);
-        });
+        dummy.position.set(
+          Math.cos(angle) * radius,
+          height,
+          Math.sin(angle) * radius
+        );
+        dummy.rotation.y = Math.random() * Math.PI;
+        dummy.rotation.z = Math.random() * Math.PI;
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+
+        const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        col.toArray(colorAttr, i * 3);
       }
 
-      const faceRotations = [
-        new THREE.Euler(0, 0, 0),
-        new THREE.Euler(0, Math.PI / 2, 0),
-        new THREE.Euler(-Math.PI / 2, 0, 0)
-      ];
-
-      faceRotations.forEach(rot => {
-        const matrix = new THREE.Matrix4().makeRotationFromEuler(rot);
-        for (let x = -1; x <= 1; x++) {
-          for (let y = -1; y <= 1; y++) {
-            addTriangle(x * triangleSize, y * triH, matrix);
-          }
-        }
-      });
-
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-      const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true });
-      const points = new THREE.Points(geometry, material);
-      scene.add(points);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(colorAttr, 3);
 
       let rotating = false;
       container.addEventListener('mousedown', () => rotating = true);
@@ -101,8 +92,8 @@
       function animate() {
         requestAnimationFrame(animate);
         if (rotating) {
-          points.rotation.y += 0.01;
-          points.rotation.x += 0.005;
+          mesh.rotation.y += 0.01;
+          mesh.rotation.x += 0.005;
         }
         renderer.render(scene, camera);
       }
@@ -121,3 +112,4 @@
     </script>
   </body>
 </html>
+
