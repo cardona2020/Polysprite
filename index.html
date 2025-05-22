@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Logo as Vertex Points</title>
+    <title>Interactive 3D Logo</title>
     <style>
       body { margin: 0; overflow: hidden; background: #000; }
       canvas { display: block; }
@@ -21,25 +21,29 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Cube triangle tiling pattern (simplified version)
-      const size = 1;
-      const half = size / 2;
-      const triangleHeight = Math.sqrt(3) / 2 * size;
+      // Color palette from logo
+      const colorPalette = [
+        '#37d1b8', '#38c7c1', '#43d7c7', '#55d5af',
+        '#66d095', '#6adfd4', '#7fcd7a', '#8473cd',
+        '#8eca64', '#94e9e0'
+      ];
 
+      function hexToRgb(hex) {
+        const bigint = parseInt(hex.replace('#', ''), 16);
+        return [
+          ((bigint >> 16) & 255) / 255,
+          ((bigint >> 8) & 255) / 255,
+          (bigint & 255) / 255
+        ];
+      }
+
+      // Cube face generation
       const positions = [];
       const colors = [];
 
-      const faceOffsets = [
-        new THREE.Vector3(0, 0, 0),     // Front
-        new THREE.Vector3(0, 0, -1),    // Right
-        new THREE.Vector3(0, 1, 0),     // Top
-      ];
-
-      const faceRotations = [
-        new THREE.Euler(0, 0, 0),                     // Front
-        new THREE.Euler(0, Math.PI / 2, 0),           // Right
-        new THREE.Euler(-Math.PI / 2, 0, 0),          // Top
-      ];
+      const size = 1;
+      const half = size / 2;
+      const triangleHeight = Math.sqrt(3) / 2 * size;
 
       const triangle = [
         [0, 0, 0],
@@ -47,7 +51,17 @@
         [half, triangleHeight, 0]
       ];
 
-      const colorPalette = [0xff77ff, 0x77ffff, 0x77ff77, 0xffff77];
+      const faceOffsets = [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -1),
+        new THREE.Vector3(0, 1, 0),
+      ];
+
+      const faceRotations = [
+        new THREE.Euler(0, 0, 0),
+        new THREE.Euler(0, Math.PI / 2, 0),
+        new THREE.Euler(-Math.PI / 2, 0, 0),
+      ];
 
       function createFace(origin, rotation) {
         const rotMatrix = new THREE.Matrix4().makeRotationFromEuler(rotation);
@@ -56,18 +70,18 @@
         for (let x = 0; x < 3; x++) {
           for (let y = 0; y < 3; y++) {
             const offset = new THREE.Vector3(x * size, y * triangleHeight, 0);
-            const triangleColor = new THREE.Color(colorPalette[Math.floor(Math.random() * colorPalette.length)]);
+            const color = hexToRgb(colorPalette[Math.floor(Math.random() * colorPalette.length)]);
 
             for (const point of triangle) {
               const v = new THREE.Vector3(...point).add(offset).applyMatrix4(rotMatrix).add(base);
               positions.push(v.x, v.y, v.z);
-              colors.push(triangleColor.r, triangleColor.g, triangleColor.b);
+              colors.push(...color);
             }
           }
         }
       }
 
-      // Create three visible cube faces
+      // Build cube faces
       for (let i = 0; i < 3; i++) {
         createFace(faceOffsets[i], faceRotations[i]);
       }
@@ -84,13 +98,27 @@
       const points = new THREE.Points(geometry, material);
       scene.add(points);
 
+      let rotating = false;
+
+      window.addEventListener('mousedown', () => rotating = true);
+      window.addEventListener('mouseup', () => rotating = false);
+
       function animate() {
         requestAnimationFrame(animate);
-        points.rotation.y += 0.002;
+        if (rotating) {
+          points.rotation.y += 0.01;
+          points.rotation.x += 0.005;
+        }
         renderer.render(scene, camera);
       }
 
       animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
     </script>
   </body>
 </html>
